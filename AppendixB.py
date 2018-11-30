@@ -309,6 +309,8 @@ def generate_population(training_set, classes, size, parameters):
 
     for c in classes:
         class_data = [i for i in training_set if i[0] == c]
+        if len(class_data) == 0:
+            continue
         non_class_data = [i for i in training_set if i[0] != c]
 
         tree = KDTree.construct_from_data(non_class_data)
@@ -342,7 +344,8 @@ def original_generate_population(training_set, classes, size, parameters):
     # select random antibodies from the self class, and add with a radius of 0
     for c in classes:
         class_data = [i for i in training_set if i[0] == c]
-
+        if len(class_data) == 0:
+            continue
         num_of_antibodies = int(float(size) / float(len(classes)))
         for i in range(num_of_antibodies):
             proposed_center = choice(class_data)
@@ -363,16 +366,16 @@ def original_generate_population(training_set, classes, size, parameters):
 
 
 # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
-files = [f for f in listdir("C:/Users/Brian/Documents/IPython Notebooks/network_data/")]
+files = [f for f in listdir("data/")]
 original_data = []
 for f in files:
     original_data = original_data + getdata(
-        "C:/Users/Brian/Documents/IPython Notebooks/network_data/" + f)
+        "data/" + f)
 classes = get_class_labels(original_data)
 proportions = proportion_per_class(original_data)
 
 parameters = {}
-parameters["step_size"] = 0.01
+parameters["step_size"] = 0.05
 
 # varying the training set size
 # learning time, seconds of time over training set size,
@@ -391,7 +394,7 @@ for set_size in range(200, 1050, 50):
     time_with_kd = 0.0
     time_without_kd = 0.0
     SVM_time = 0.0
-
+    average_accuracy = 0.0
     for st in range(10):
         test_set = data[st % len(data)]
         validation_set = data[(st + 1) % len(data)]
@@ -405,22 +408,27 @@ for set_size in range(200, 1050, 50):
 
         time_with_kd = time_with_kd + (end - start)
 
-        start = time.time()
-        antibodies = original_generate_population(training_set, classes, 1000, parameters)
-        end = time.time()
+        # start = time.time()
+        # antibodies = original_generate_population(training_set, classes, 1000, parameters)
+        # end = time.time()
+        accuracy = test_accuracy(antibodies, test_set, parameters)
+        average_accuracy = average_accuracy + accuracy
+    print("1000 \t ", " \t ", average_accuracy / 10.0)
 
-        time_without_kd = time_without_kd + (end - start)
-
-        # preparing data for SVM
-        datta = separate(training_set)
-        training_set_labels = datta[0]
-        training_set_data = datta[1]
-        start = time.time()
-        lin_clf = svm.LinearSVC()
-        lin_clf.fit(training_set_data, training_set_labels)
-        end = time.time()
-        SVM_time = SVM_time + (end - start)
-    print(set_size, " \t ", time_with_kd / 10.0, " \t ", time_without_kd / 10.0, " \t ", SVM_time / 10.0)
+    #     time_without_kd = time_without_kd + (end - start)
+    #
+    #     # preparing data for SVM
+    #     datta = separate(training_set)
+    #     training_set_labels = datta[0]
+    #     training_set_data = datta[1]
+    #     training_set_data_2d = [d[0] for d in training_set_data]
+    #
+    #     start = time.time()
+    #     lin_clf = svm.LinearSVC()
+    #     lin_clf.fit(training_set_data_2d, training_set_labels)
+    #     end = time.time()
+    #     SVM_time = SVM_time + (end - start)
+    # print(set_size, " \t ", time_with_kd / 10.0, " \t ", time_without_kd / 10.0, " \t ", SVM_time / 10.0)
 print("")
 
 

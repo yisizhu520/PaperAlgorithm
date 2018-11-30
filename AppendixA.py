@@ -90,18 +90,6 @@ def distance(x1, x2, parameters):
         return distance
 
 
-# these functions are used for doing prediction with the population of antibodies
-def distance(x1, x2, parameters):
-    if len(x1) != len(x2):
-        return False
-    else:
-        distance = 0
-        for i in range(1, len(x1)):
-            distance = distance + ((float(x1[i]) - float(x2[i])) ** 2)
-        distance = math.sqrt(distance)
-        return distance
-
-
 # testing the prediction performance
 def test_fmeasure(antibodies, test_data, class_label, parameters):
     TP, TN, FP, FN = 0, 0, 0, 0
@@ -147,6 +135,9 @@ def test_accuracy(antibodies, test_data, parameters):
         else:
             correct_count = correct_count + 1
         # print "predicted: ", yhat, " actual: ", x[0]
+        if len(test_data) == 0:
+            print('test data is empty')
+            return 0
     return float(correct_count) / float(len(test_data))
 
 
@@ -167,6 +158,7 @@ def error_count(antibody, training_set, parameters):
     error_count = 0
     class_data = [i for i in training_set if i[0] != antibody[0][0]]
     for t in class_data:
+        # print('distance--%d', distance(t, antibody[0], parameters))
         if distance(t, antibody[0], parameters) <= antibody[1]:
             error_count = error_count + 1
     return error_count
@@ -177,6 +169,8 @@ def generate_population(training_set, classes, size, parameters):
     # select random antibodies from the self class, and add with a radius of 0
     for c in classes:
         class_data = [i for i in training_set if i[0] == c]
+        if len(class_data) == 0:
+            continue
         num_of_antibodies = int(float(size) / float(len(classes)))
         for i in range(num_of_antibodies):
             proposed_antibody = [choice(class_data), 0.0]
@@ -195,14 +189,14 @@ def generate_population(training_set, classes, size, parameters):
 
 
 # structure of antibody: [ [class, x1, x2, x3,... ], radius]
-files = [f for f in listdir("C:/Users/Brian/Documents/IPythonNotebooks/network_data/")]
+files = [f for f in listdir("data/")]
 original_data = []
 for f in files:
-    original_data = original_data + getdata("C:/Users/Brian/Documents/IPython Notebooks/network_data/" + f)
+    original_data = original_data + getdata("data/" + f)
 classes = get_class_labels(original_data)
 set_size = 1000
 parameters = {}
-parameters["step_size"] = 0.01
+parameters["step_size"] = 0.05
 parameters["c"] = 0.08
 parameters["d"] = 2
 print("Fig 2. Classification accuracy with data set size held at 1000 samples")
