@@ -5,7 +5,7 @@ from operator import itemgetter
 from os import listdir
 from random import choice
 from random import shuffle
-
+import sys as sys
 
 # this function is for importing data
 def getdata(file_name):
@@ -164,6 +164,15 @@ def error_count(antibody, training_set, parameters):
     return error_count
 
 
+def get_step_size(training_set, chosen_class):
+    chosen_class_data = [i for i in training_set if i[0] == chosen_class]
+    other_class_data = [i for i in training_set if i[0] != chosen_class]
+    min_dis = sys.maxsize
+    for c in chosen_class_data:
+        for o in other_class_data:
+            min_dis = min(distance(c, o, {}), min_dis)
+    return min_dis
+
 def generate_population(training_set, classes, size, parameters):
     antibodies = []
     # select random antibodies from the self class, and add with a radius of 0
@@ -177,16 +186,24 @@ def generate_population(training_set, classes, size, parameters):
             antibodies.append(proposed_antibody)
     # expand the antibodies by a step size until it misclassify a non-self point
     for a in antibodies:
+        step_size = class_step_dict[a[0][0]]
         changed = True
         while changed:
             if error_count(a, training_set, parameters) > 0:
-                a[1] = a[1] - parameters["step_size"]
+                a[1] = a[1] - step_size
                 changed = False
             else:
-                a[1] = a[1] + parameters["step_size"]
+                a[1] = a[1] + step_size
                 changed = True
     return antibodies
 
+def get_step_size_for_all_class(training_set, classes):
+    class_step_dict = {}
+    for c in classes:
+        step_size = get_step_size(training_set, c)
+        step_size = max(step_size, 0.05)
+        class_step_dict[c] = step_size
+    return class_step_dict
 
 # structure of antibody: [ [class, x1, x2, x3,... ], radius]
 files = [f for f in listdir("data/")]
@@ -216,6 +233,8 @@ for pop_size in range(100, 1100, 50):
         training_set = []
         for tsp in range(len(data) - 1):
             training_set = training_set + data[(st + 3 + tsp) % len(data)]
+        class_step_dict = get_step_size_for_all_class(training_set, classes)
+        print(class_step_dict)
         antibodies = generate_population(training_set, classes, pop_size, parameters)
         accuracy = test_accuracy(antibodies, test_set, parameters)
         average_accuracy = average_accuracy + accuracy
