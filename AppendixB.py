@@ -365,6 +365,19 @@ def original_generate_population(training_set, classes, size, parameters):
     return antibodies
 
 
+def test_svm_accuracy(clf, test_set):
+    error_count = 0
+    correct_count = 0
+    test_set_2d = [d[1] for d in test_set]
+    test_result = clf.predict(test_set_2d)
+    for i in range(len(test_set)):
+        if test_set[i][0] != test_result[i]:
+            error_count = error_count + 1
+        else:
+            correct_count = correct_count + 1
+    return float(correct_count) / float(len(test_set))
+
+
 # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
 files = [f for f in listdir("data/")]
 original_data = []
@@ -379,61 +392,61 @@ parameters["step_size"] = 0.05
 
 # varying the training set size
 # learning time, seconds of time over training set size,
-print("set_size \t time_with_kd \t time_without_kd")
-for set_size in range(200, 1050, 50):
-    average_time = 0.0
-    # building a balanced data set
-    data = []
-    for c in classes:
-        class_data = [d for d in original_data if d[0] == c]
-        shuffle(class_data)
-        data = data + class_data[:int(float(set_size) / float(len(classes)))]
-    data = normalize(data)
-    data = stratify(data, 10)
-
-    time_with_kd = 0.0
-    time_without_kd = 0.0
-    SVM_time = 0.0
-    average_accuracy = 0.0
-    for st in range(10):
-        test_set = data[st % len(data)]
-        validation_set = data[(st + 1) % len(data)]
-        training_set = []
-        for tsp in range(len(data) - 2):
-            training_set = training_set + data[(st + 2 + tsp) % len(data)]
-
-        start = time.time()
-        antibodies = generate_population(training_set, classes, 1000, parameters)
-        end = time.time()
-
-        time_with_kd = time_with_kd + (end - start)
-
-        # start = time.time()
-        # antibodies = original_generate_population(training_set, classes, 1000, parameters)
-        # end = time.time()
-        accuracy = test_accuracy(antibodies, test_set, parameters)
-        average_accuracy = average_accuracy + accuracy
-    print("1000 \t ", " \t ", average_accuracy / 10.0)
-
-    #     time_without_kd = time_without_kd + (end - start)
-    #
-    #     # preparing data for SVM
-    #     datta = separate(training_set)
-    #     training_set_labels = datta[0]
-    #     training_set_data = datta[1]
-    #     training_set_data_2d = [d[0] for d in training_set_data]
-    #
-    #     start = time.time()
-    #     lin_clf = svm.LinearSVC()
-    #     lin_clf.fit(training_set_data_2d, training_set_labels)
-    #     end = time.time()
-    #     SVM_time = SVM_time + (end - start)
-    # print(set_size, " \t ", time_with_kd / 10.0, " \t ", time_without_kd / 10.0, " \t ", SVM_time / 10.0)
-print("")
+# print("set_size \t time_with_kd \t time_without_kd")
+# for set_size in range(200, 1050, 50):
+#     average_time = 0.0
+#     # building a balanced data set
+#     data = []
+#     for c in classes:
+#         class_data = [d for d in original_data if d[0] == c]
+#         shuffle(class_data)
+#         data = data + class_data[:int(float(set_size) / float(len(classes)))]
+#     data = normalize(data)
+#     data = stratify(data, 10)
+#
+#     time_with_kd = 0.0
+#     time_without_kd = 0.0
+#     SVM_time = 0.0
+#     average_accuracy = 0.0
+#     for st in range(10):
+#         test_set = data[st % len(data)]
+#         validation_set = data[(st + 1) % len(data)]
+#         training_set = []
+#         for tsp in range(len(data) - 2):
+#             training_set = training_set + data[(st + 2 + tsp) % len(data)]
+#
+#         start = time.time()
+#         antibodies = generate_population(training_set, classes, 1000, parameters)
+#         end = time.time()
+#
+#         time_with_kd = time_with_kd + (end - start)
+#
+#         # start = time.time()
+#         # antibodies = original_generate_population(training_set, classes, 1000, parameters)
+#         # end = time.time()
+#         accuracy = test_accuracy(antibodies, test_set, parameters)
+#         average_accuracy = average_accuracy + accuracy
+#     print("1000 \t ", " \t ", average_accuracy / 10.0)
+#
+#     #     time_without_kd = time_without_kd + (end - start)
+#     #
+#     #     # preparing data for SVM
+#     #     datta = separate(training_set)
+#     #     training_set_labels = datta[0]
+#     #     training_set_data = datta[1]
+#     #     training_set_data_2d = [d[0] for d in training_set_data]
+#     #
+#     #     start = time.time()
+#     #     lin_clf = svm.LinearSVC()
+#     #     lin_clf.fit(training_set_data_2d, training_set_labels)
+#     #     end = time.time()
+#     #     SVM_time = SVM_time + (end - start)
+#     # print(set_size, " \t ", time_with_kd / 10.0, " \t ", time_without_kd / 10.0, " \t ", SVM_time / 10.0)
+# print("")
 
 
 # varying the antibody population time
-print("pop_size \t time_with_kd \t time_without_kd")
+print("pop_size \t time_with_kd, accuracy \t time_without_kd, accuracy \t svm_time, accuracy")
 for pop_size in range(200, 1050, 50):
     # building a balanced data set
     data = []
@@ -448,7 +461,9 @@ for pop_size in range(200, 1050, 50):
     time_with_kd = 0.0
     time_without_kd = 0.0
     SVM_time = 0.0
-
+    average_accuracy_with_kd = 0.0
+    average_accuracy_without_kd = 0.0
+    average_accuracy_svm = 0.0
     for st in range(10):
         test_set = data[st % len(data)]
         validation_set = data[(st + 1) % len(data)]
@@ -456,28 +471,43 @@ for pop_size in range(200, 1050, 50):
         for tsp in range(len(data) - 2):
             training_set = training_set + data[(st + 2 + tsp) % len(data)]
 
-        start = time.clock()
         antibodies = generate_population(training_set, classes, pop_size, parameters)
-        end = time.clock()
+        start = time.time()
+        accuracy = test_accuracy(antibodies, test_set, parameters)
+        end = time.time()
 
         time_with_kd = time_with_kd + (float(end) - float(start))
 
-        start = time.clock()
-        antibodies = original_generate_population(training_set, classes,pop_size, parameters)
-        end = time.clock()
+        # accuracy = test_accuracy(antibodies, test_set, parameters)
+        average_accuracy_with_kd = average_accuracy_with_kd + accuracy
+
+        antibodies = original_generate_population(training_set, classes, pop_size, parameters)
+        start = time.time()
+        accuracy = test_accuracy(antibodies, test_set, parameters)
+        end = time.time()
 
         time_without_kd = time_without_kd + (float(end) - float(start))
+
+        accuracy = test_accuracy(antibodies, test_set, parameters)
+        average_accuracy_without_kd = average_accuracy_without_kd + accuracy
 
         # preparing data for SVM
         datta = separate(training_set)
         training_set_labels = datta[0]
         training_set_data = datta[1]
-
-        start = time.time()
+        training_set_data_2d = [d[0] for d in training_set_data]
         lin_clf = svm.LinearSVC()
-        lin_clf.fit(training_set_data, training_set_labels)
+        lin_clf.fit(training_set_data_2d, training_set_labels)
+        start = time.time()
+        accuracy = test_svm_accuracy(lin_clf, test_set)
         end = time.time()
 
         SVM_time = SVM_time + (end - start)
-    print(pop_size, " \t ", time_with_kd / 10.0, " \t ", time_without_kd / 10.0, " \t ", SVM_time / 10.0)
+        accuracy = test_svm_accuracy(lin_clf, test_set)
+        average_accuracy_svm = average_accuracy_svm + accuracy
+
+    print(pop_size, " \t ", time_with_kd / 10.0, ", ", average_accuracy_with_kd / 10.0,
+          " \t ", time_without_kd / 10.0, ", ", average_accuracy_without_kd / 10.0,
+          " \t ", SVM_time / 10.0, ", ", average_accuracy_svm / 10.0
+          )
 print("")
