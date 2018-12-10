@@ -5,7 +5,7 @@ from operator import itemgetter
 from os import listdir
 from random import choice
 from random import shuffle
-
+from math import sqrt
 from sklearn import svm
 
 
@@ -280,7 +280,8 @@ def test_accuracy(antibodies, test_data, parameters):
     error_count = 0
     correct_count = 0
     for x in test_data:
-        yhat = predict(antibodies, x, parameters)
+        # yhat = predict(antibodies, x, parameters)
+        yhat = optimized_predict(antibodies, x, x[0])
         if x[0] != yhat:
             error_count = error_count + 1
             # print ("predicted: ", yhat, " actual: ", x[0], "\t\t#")
@@ -302,6 +303,21 @@ def predict(antibodies, x, parameters):
     distances.sort(key=itemgetter(1))
     return distances[0][0]
 
+def optimized_predict(antibodies, x, self_class):
+    # select the antibodies that could contain the point
+    # for every dimension in the antibody center:
+    for i in range(len(antibodies[0][1])):
+        antibodies = [a for a in antibodies if x[1][i] > (a[1][i] - a[2]) and x[1][i] < (a[1][i] + a[2])]
+
+    # further filter the set of antibodies
+    for a in antibodies:
+        if distance(a[1], x[1][:], {}) < a[2]:
+            return 'nothing'
+    return self_class
+
+def distance2(x1, x2):
+    distance = sqrt(sum((x1 - x2) ** 2 for x1, x2 in zip(x1, x2)))
+    return distance
 
 def generate_population(training_set, classes, size, parameters):
     antibodies = []
@@ -369,12 +385,18 @@ def test_svm_accuracy(clf, test_set):
     error_count = 0
     correct_count = 0
     test_set_2d = [d[1] for d in test_set]
-    test_result = clf.predict(test_set_2d)
-    for i in range(len(test_set)):
-        if test_set[i][0] != test_result[i]:
+    for i in range(len(test_set_2d)):
+        test_result = clf.predict([test_set_2d[i]])
+        if test_set[i][0] != test_result[0]:
             error_count = error_count + 1
         else:
             correct_count = correct_count + 1
+    # test_result = clf.predict(test_set_2d)
+    # for i in range(len(test_set)):
+    #     if test_set[i][0] != test_result[i]:
+    #         error_count = error_count + 1
+    #     else:
+    #         correct_count = correct_count + 1
     return float(correct_count) / float(len(test_set))
 
 
