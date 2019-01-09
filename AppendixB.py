@@ -7,6 +7,8 @@ from random import choice
 from random import shuffle
 from math import sqrt
 from sklearn import svm
+import copy
+import numpy as np
 
 
 def separate(data):
@@ -236,7 +238,7 @@ def distance(x1, x2, parameters):
         distance = 0
         for i in range(len(x1)):
             distance = distance + ((float(x1[i]) - float(x2[i])) ** 2)
-        distance = math.sqrt(distance)
+        # distance = math.sqrt(distance)
         return distance
 
 
@@ -303,6 +305,7 @@ def predict(antibodies, x, parameters):
     distances.sort(key=itemgetter(1))
     return distances[0][0]
 
+
 def optimized_predict(antibodies, x, self_class):
     # select the antibodies that could contain the point
     # for every dimension in the antibody center:
@@ -315,9 +318,11 @@ def optimized_predict(antibodies, x, self_class):
             return 'nothing'
     return self_class
 
+
 def distance2(x1, x2):
     distance = sqrt(sum((x1 - x2) ** 2 for x1, x2 in zip(x1, x2)))
     return distance
+
 
 def generate_population(training_set, classes, size, parameters):
     antibodies = []
@@ -332,6 +337,7 @@ def generate_population(training_set, classes, size, parameters):
         tree = KDTree.construct_from_data(non_class_data)
 
         for i in range(num_of_antibodies):
+            # replace random choice with CSA here
             proposed_center = choice(class_data)
             nearest = tree.query(proposed_center, t=1)[0]
             dist = distance(nearest[1], proposed_center[1], parameters)
@@ -400,17 +406,116 @@ def test_svm_accuracy(clf, test_set):
     return float(correct_count) / float(len(test_set))
 
 
+# ------------ CSA start --------------------
+
+def csa(training_set, classes, size, parameters):
+    iteration_time = 1000
+    results = get_random_population_results(training_set, classes, size, parameters)
+    for i in range(iteration_time):
+        results = get_best_population_with_csa(results, training_set, classes, size, parameters)
+        results.sort(key=lambda result: result['fitness'], reverse=True)
+        print(results[0]['fitness'])
+
+
+
+
+def get_random_population_results(training_set, classes, size, parameters):
+    result_objs = []
+    init_random_pop_size = 10
+    for i in range(init_random_pop_size):
+        antibodies = generate_population(training_set, classes, size, parameters)
+        fitness = cal_fitness(antibodies, training_set)
+        obj = {'antibodies': antibodies, 'fitness': fitness}
+        result_objs.append(obj)
+    return result_objs
+
+
+def get_best_population_with_csa(population_results, training_set, classes, size, parameters):
+    choose_top_size = 5
+    clone_size = 5
+    random_reproduced_antibody_percent = 0.25
+    result_objs = population_results
+    result_objs.sort(key=lambda result: result['fitness'], reverse=True)
+    top_result = result_objs[:choose_top_size]
+    last_result = result_objs[choose_top_size:len(result_objs)]
+
+    clone_pop_results = clone_population(top_result, clone_size)
+    for pop_result in clone_pop_results:
+        antis = pop_result['antibodies']
+        antis = reproduce_antibodies(antis, random_reproduced_antibody_percent, training_set, classes, parameters)
+        pop_result['fitness'] = cal_fitness(antis, training_set)
+
+    for pop_result in last_result:
+        clone_pop_results.append(pop_result)
+    clone_pop_results.sort(key=lambda result: result['fitness'], reverse=True)
+    last_result = clone_pop_results[:len(last_result)]
+
+    combine_result = top_result + last_result
+    # print(combine_result)
+    return combine_result
+
+
+def get_class_antibody_dict(antibodies):
+    classes_antibody_dict = {}
+    for a in antibodies:
+        if a[0] not in classes_antibody_dict:
+            classes_antibody_dict[a[0]] = []
+            classes_antibody_dict[a[0]].append(a)
+        else:
+            classes_antibody_dict[a[0]].append(a)
+    return classes_antibody_dict
+
+
+def cal_fitness(antibodies, data_set):
+    classes_antibody_dict = get_class_antibody_dict(antibodies)
+    correct_count = 0
+    for d in data_set:
+        class_antibodies = classes_antibody_dict[d[0]]
+        for a in class_antibodies:
+            dis = distance(d[1], a[1], parameters)
+            if dis <= a[2]:
+                correct_count = correct_count + 1
+                break
+    return float(correct_count) / float(len(data_set))
+
+
+def clone_population(original_pops, clone_size):
+    results = []
+    for pop in original_pops:
+        for i in range(clone_size):
+            results.append(copy.deepcopy(pop))
+    return results
+
+
+def reproduce_antibodies(antibodies, percent, training_set, classes, parameters):
+    classes_antibody_dict = get_class_antibody_dict(antibodies)
+    # remove percent of antibodies randomly
+    for cls in classes_antibody_dict:
+        antis = classes_antibody_dict[cls]
+        remove_size = int(len(antis) * percent)
+        for i in range(remove_size):
+            antis.remove(choice(antis))
+    # reproduce percent of antibodies
+    reproduced_pops = generate_population(training_set, classes, int(len(antibodies) * percent), parameters)
+    new_antis = []
+    for cls in classes_antibody_dict:
+        for a in classes_antibody_dict[cls]:
+            new_antis.append(a)
+    for pop in reproduced_pops:
+        new_antis.append(pop)
+    return new_antis
+
+
+# ------------ CSA end ----------------------
+
+
 # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
-files = [f for f in listdir("data/")]
-original_data = []
-for f in files:
-    original_data = original_data + getdata(
-        "data/" + f)
+original_data = getdata("data/kddcup_1k.csv")
 classes = get_class_labels(original_data)
-proportions = proportion_per_class(original_data)
+# proportions = proportion_per_class(original_data)
 
 parameters = {}
-parameters["step_size"] = 0.05
+parameters["step_size"] = 0.1
 
 # varying the training set size
 # learning time, seconds of time over training set size,
@@ -475,7 +580,7 @@ for pop_size in range(200, 1050, 50):
     for c in classes:
         class_data = [d for d in original_data if d[0] == c]
         shuffle(class_data)
-        data = data + class_data[:int(float(1000) / float(len(classes)))]
+        data = data + class_data
 
     data = normalize(data)
     data = stratify(data, 10)
@@ -492,7 +597,7 @@ for pop_size in range(200, 1050, 50):
         training_set = []
         for tsp in range(len(data) - 2):
             training_set = training_set + data[(st + 2 + tsp) % len(data)]
-
+        csa(training_set, classes, pop_size, parameters)
         antibodies = generate_population(training_set, classes, pop_size, parameters)
         start = time.time()
         accuracy = test_accuracy(antibodies, test_set, parameters)
