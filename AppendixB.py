@@ -414,7 +414,6 @@ def get_best_population_with_csa(training_set, classes, size, parameters):
     accuracy = 0.000001
     last_results = []
     results = get_random_population_results(training_set, classes, size, parameters)
-    results.sort(key=lambda result: result['fitness'], reverse=False)
     print('old')
     print(results[0]['fitness'])
     print('new')
@@ -591,7 +590,7 @@ parameters["step_size"] = 0.1
 
 # varying the antibody population time
 print("pop_size \t time_with_kd, accuracy \t time_without_kd, accuracy \t svm_time, accuracy")
-for pop_size in range(200, 1050, 50):
+for pop_size in range(500, 1050, 50):
     # building a balanced data set
     data = []
     for c in classes:
