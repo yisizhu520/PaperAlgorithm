@@ -408,15 +408,32 @@ def test_svm_accuracy(clf, test_set):
 
 # ------------ CSA start --------------------
 
-def csa(training_set, classes, size, parameters):
+def get_best_population_with_csa(training_set, classes, size, parameters):
     iteration_time = 1000
+    save_count = 5
+    accuracy = 0.000001
+    last_results = []
     results = get_random_population_results(training_set, classes, size, parameters)
+    results.sort(key=lambda result: result['fitness'], reverse=False)
+    print('old')
+    print(results[0]['fitness'])
+    print('new')
     for i in range(iteration_time):
-        results = get_best_population_with_csa(results, training_set, classes, size, parameters)
+        results = csa(results, training_set, classes, size, parameters)
         results.sort(key=lambda result: result['fitness'], reverse=True)
         print(results[0]['fitness'])
-
-
+        last_results.append(results[0])
+        if len(last_results) == save_count:
+            flag = True
+            for j in range(save_count - 1):
+                if abs(last_results[save_count - 1]['fitness'] - last_results[j]['fitness']) > accuracy:
+                    flag = False
+                    break
+            if flag:
+                print(last_results[save_count - 1]['antibodies'])
+                return last_results[save_count - 1]['antibodies']
+            else:
+                last_results.remove(last_results[0])
 
 
 def get_random_population_results(training_set, classes, size, parameters):
@@ -430,7 +447,7 @@ def get_random_population_results(training_set, classes, size, parameters):
     return result_objs
 
 
-def get_best_population_with_csa(population_results, training_set, classes, size, parameters):
+def csa(population_results, training_set, classes, size, parameters):
     choose_top_size = 5
     clone_size = 5
     random_reproduced_antibody_percent = 0.25
@@ -597,7 +614,7 @@ for pop_size in range(200, 1050, 50):
         training_set = []
         for tsp in range(len(data) - 2):
             training_set = training_set + data[(st + 2 + tsp) % len(data)]
-        csa(training_set, classes, pop_size, parameters)
+        get_best_population_with_csa(training_set, classes, pop_size, parameters)
         antibodies = generate_population(training_set, classes, pop_size, parameters)
         start = time.time()
         accuracy = test_accuracy(antibodies, test_set, parameters)
