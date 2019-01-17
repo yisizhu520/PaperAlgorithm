@@ -526,7 +526,7 @@ def reproduce_antibodies(antibodies, percent, training_set, classes, parameters)
 
 
 # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
-original_data = getdata("data/kdd_2k.csv")
+original_data = getdata("data/kddcup_1k.csv")
 classes = get_class_labels(original_data)
 # proportions = proportion_per_class(original_data)
 
@@ -589,7 +589,8 @@ parameters["step_size"] = 0.1
 
 
 # varying the antibody population time
-print("pop_size \t time_with_kd_CSA, accuracy \t time_with_kd, accuracy \t time_without_kd, accuracy \t svm_time, accuracy")
+print(
+    "pop_size \t time_with_kd_CSA, accuracy \t time_with_kd, accuracy \t time_without_kd, accuracy \t svm_time, accuracy")
 for pop_size in range(300, 750, 50):
     # building a balanced data set
     data = []
@@ -608,22 +609,23 @@ for pop_size in range(300, 750, 50):
     average_accuracy_without_kd = 0.0
     average_accuracy_svm = 0.0
     average_accuracy_with_kd_CSA = 0.0
-    for st in range(3):
+    iteration_count = 3
+    for st in range(iteration_count):
         test_set = data[st % len(data)]
         validation_set = data[(st + 1) % len(data)]
         training_set = []
         for tsp in range(len(data) - 2):
             training_set = training_set + data[(st + 2 + tsp) % len(data)]
-        #test with CSA
-        # csa_antibodies = get_best_population_with_csa(training_set, classes, pop_size, parameters)
-        # start = time.time()
-        # accuracy = test_accuracy(csa_antibodies, test_set, parameters)
-        # end = time.time()
-        # time_with_kd_CSA = time_with_kd_CSA + (float(start)-float(end))
-        # accuracy = test_accuracy(csa_antibodies, test_set, parameters)
-        # average_accuracy_with_kd_CSA = average_accuracy_with_kd_CSA + accuracy
-        
-        #test without CSA
+        # test with CSA
+        csa_antibodies = get_best_population_with_csa(training_set, classes, pop_size, parameters)
+        start = time.time()
+        accuracy = test_accuracy(csa_antibodies, test_set, parameters)
+        end = time.time()
+        time_with_kd_CSA = time_with_kd_CSA + (float(end)-float(start))
+        accuracy = test_accuracy(csa_antibodies, test_set, parameters)
+        average_accuracy_with_kd_CSA = average_accuracy_with_kd_CSA + accuracy
+
+        # test without CSA
         antibodies = generate_population(training_set, classes, pop_size, parameters)
         start = time.time()
         accuracy = test_accuracy(antibodies, test_set, parameters)
@@ -659,6 +661,7 @@ for pop_size in range(300, 750, 50):
         accuracy = test_svm_accuracy(lin_clf, test_set)
         average_accuracy_svm = average_accuracy_svm + accuracy
 
-    print(pop_size, " \t ", time_with_kd_CSA / 10.0, ", ", average_accuracy_with_kd_CSA / 10.0," \t", time_with_kd / 10.0, ", ", average_accuracy_with_kd / 10.0,
-          " \t ", SVM_time / 10.0, ", ", average_accuracy_svm / 10.0)
+    print(pop_size, " \t ", time_with_kd_CSA / iteration_count, ", ", average_accuracy_with_kd_CSA / iteration_count, " \t",
+          time_with_kd / iteration_count, ", ", average_accuracy_with_kd / iteration_count,
+          " \t ", SVM_time / iteration_count, ", ", average_accuracy_svm / iteration_count)
 print("")
