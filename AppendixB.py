@@ -5,6 +5,7 @@ from operator import itemgetter
 from os import listdir
 from random import choice
 from random import shuffle
+import random
 from math import sqrt
 from sklearn import svm
 import copy
@@ -412,8 +413,9 @@ def get_best_population_with_csa(training_set, classes, size, parameters):
     iteration_time = 1000
     save_count = 5
     accuracy = 0.000001
+    init_chromosome_size = 10
     last_results = []
-    results = get_random_population_results(training_set, classes, size, parameters)
+    results = get_random_population_results(training_set, classes, size, parameters, init_chromosome_size)
     print('old')
     print(results[0]['fitness'])
     print('new')
@@ -435,10 +437,9 @@ def get_best_population_with_csa(training_set, classes, size, parameters):
                 last_results.remove(last_results[0])
 
 
-def get_random_population_results(training_set, classes, size, parameters):
+def get_random_population_results(training_set, classes, size, parameters, init_chromosome_size):
     result_objs = []
-    init_random_pop_size = 10
-    for i in range(init_random_pop_size):
+    for i in range(init_chromosome_size):
         antibodies = generate_population(training_set, classes, size, parameters)
         fitness = cal_fitness(antibodies, training_set)
         obj = {'antibodies': antibodies, 'fitness': fitness}
@@ -524,6 +525,125 @@ def reproduce_antibodies(antibodies, percent, training_set, classes, parameters)
 
 # ------------ CSA end ----------------------
 
+# ------------ GA start --------------------
+
+def get_best_population_with_ga(training_set, classes, size, parameters):
+    iteration_time = 1000
+    save_count = 5
+    accuracy = 0.000001
+    init_chromosome_size = 10  # 染色体数量
+    cp_ratio = 0.2  # 染色体复制的比例(每代中保留适应度较高的染色体直接成为下一代)
+
+    last_results = []
+    results = get_random_population_results(training_set, classes, size, parameters, init_chromosome_size)
+    print('old')
+    print(results[0]['fitness'])
+    print('new')
+    for i in range(iteration_time):
+        results = ga(results, training_set, classes, size, parameters, init_chromosome_size, cp_ratio)
+        results.sort(key=lambda result: result['fitness'], reverse=True)
+        last_results.append(results[0])
+        if len(last_results) == save_count:
+            flag = True
+            for j in range(save_count - 1):
+                if abs(last_results[save_count - 1]['fitness'] - last_results[j]['fitness']) > accuracy:
+                    flag = False
+                    break
+            if flag:
+                # print(last_results[save_count - 1]['antibodies'])
+                print(results[0]['fitness'])
+                return last_results[save_count - 1]['antibodies']
+            else:
+                last_results.remove(last_results[0])
+
+
+def ga(result_objs, training_set, classes, size, parameters, init_chromosome_size, cp_ratio):
+    crossover_mutation_num = int(init_chromosome_size * (1 - cp_ratio))  # 参与交叉变异的染色体数量
+
+    # 计算适应度总和
+    fitness_sum = 0.0
+    for i in range(len(result_objs)):
+        fitness_sum += result_objs[i]['fitness']
+
+    # 计算自然选择概率
+    for i in range(len(result_objs)):
+        result_objs[i]['prob'] = result_objs[i]['fitness'] / fitness_sum
+
+    # XXOO 交叉生成{crossover_mutation_num}条染色体
+    new_result_objs = []
+
+    # 按class排好antibody，便于后面的交叉
+    sort_antibodies_by_class(result_objs, classes)
+
+    for i in range(crossover_mutation_num):
+        # 采用轮盘赌选择父母染色体
+        father = result_objs[roulette_wheel_select(result_objs)]
+        mother = result_objs[roulette_wheel_select(result_objs)]
+        # 交叉
+        cross_index = random.randint(0, len(classes))
+
+        new_antibody_result = {}
+        new_antibody_result['list'] = father['list'][:cross_index] + mother['list'][cross_index:]
+        new_result_objs.append(new_antibody_result)
+
+    # 变异
+    # 随机找一个染色体
+    chromosome_index = random.randint(0, crossover_mutation_num - 1)
+    # 随机找一个类
+    class_index = random.randint(0, len(classes) - 1)
+    # 替换成重新随机生成的抗体
+    random_antibodies = generate_population(training_set, classes, size, parameters)  # 可以优化，不用生成全部类的antibodies
+    class_antibodies = [i for i in random_antibodies if i[0] == classes[class_index]]
+    new_result_objs[chromosome_index][class_index] = class_antibodies
+
+    # 新生的抗体，重新计算适应度
+    for antibody_result in new_result_objs:
+        restore_antibodies_by_list(antibody_result)
+        antibody_result['fitness'] = cal_fitness(antibody_result['antibodies'], training_set)
+
+    # 复制适应度最高的 init_chromosome_size * cp_ratio条染色
+    result_objs.sort(key=lambda result: result['fitness'], reverse=True)
+    copy_size = int(init_chromosome_size * cp_ratio)
+    for i in range(copy_size):
+        new_result_objs.append(result_objs[i])
+
+    return new_result_objs
+
+
+def sort_antibodies_by_class(result_objs, classes):
+    for result_obj in result_objs:
+        class_antibody_dict = get_class_antibody_dict(result_obj['antibodies'])
+        antibody_list = []
+        for j in classes:
+            if j in class_antibody_dict:
+                antibody_list.append(class_antibody_dict[j])
+            else:
+                antibody_list.append('empty_stub')
+        result_obj['list'] = antibody_list
+
+
+def restore_antibodies_by_list(result_obj):
+    antibodies = []
+    for antibody_list in result_obj['list']:
+        if antibody_list == 'empty_stub':
+            continue
+        for antibody in antibody_list:
+            antibodies.append(antibody)
+    result_obj['antibodies'] = antibodies
+
+
+def roulette_wheel_select(result_objs):
+    rand = random.random()
+    prob_sum = 0.0
+    for i in range(len(result_objs)):
+        prob_sum += result_objs[i]['prob']
+        if prob_sum >= rand:
+            return i
+    return 0
+
+
+# ------------ GA end ----------------------
+
 
 # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
 original_data = getdata("data/kddcup_1k.csv")
@@ -590,7 +710,7 @@ parameters["step_size"] = 0.1
 
 # varying the antibody population time
 print(
-    "pop_size \t time_with_kd_CSA, accuracy \t time_with_kd, accuracy \t time_without_kd, accuracy \t svm_time, accuracy")
+    "pop_size \t time_with_kd_CSA, accuracy \t time_with_kd_GA, accuracy \t time_with_kd, accuracy \t time_without_kd, accuracy \t svm_time, accuracy")
 for pop_size in range(300, 750, 50):
     # building a balanced data set
     data = []
@@ -602,6 +722,7 @@ for pop_size in range(300, 750, 50):
     data = normalize(data)
     data = stratify(data, 10)
     time_with_kd_CSA = 0.0
+    time_with_kd_GA = 0.0
     time_with_kd = 0.0
     time_without_kd = 0.0
     SVM_time = 0.0
@@ -609,6 +730,7 @@ for pop_size in range(300, 750, 50):
     average_accuracy_without_kd = 0.0
     average_accuracy_svm = 0.0
     average_accuracy_with_kd_CSA = 0.0
+    average_accuracy_with_kd_GA = 0.0
     iteration_count = 3
     for st in range(iteration_count):
         test_set = data[st % len(data)]
@@ -621,9 +743,18 @@ for pop_size in range(300, 750, 50):
         start = time.time()
         accuracy = test_accuracy(csa_antibodies, test_set, parameters)
         end = time.time()
-        time_with_kd_CSA = time_with_kd_CSA + (float(end)-float(start))
+        time_with_kd_CSA = time_with_kd_CSA + (float(end) - float(start))
         accuracy = test_accuracy(csa_antibodies, test_set, parameters)
         average_accuracy_with_kd_CSA = average_accuracy_with_kd_CSA + accuracy
+
+        # test with GA
+        ga_antibodies = get_best_population_with_ga(training_set, classes, pop_size, parameters)
+        start = time.time()
+        accuracy = test_accuracy(ga_antibodies, test_set, parameters)
+        end = time.time()
+        time_with_kd_GA = time_with_kd_GA + (float(end) - float(start))
+        accuracy = test_accuracy(ga_antibodies, test_set, parameters)
+        average_accuracy_with_kd_GA = average_accuracy_with_kd_GA + accuracy
 
         # test without CSA
         antibodies = generate_population(training_set, classes, pop_size, parameters)
@@ -661,7 +792,10 @@ for pop_size in range(300, 750, 50):
         accuracy = test_svm_accuracy(lin_clf, test_set)
         average_accuracy_svm = average_accuracy_svm + accuracy
 
-    print(pop_size, " \t ", time_with_kd_CSA / iteration_count, ", ", average_accuracy_with_kd_CSA / iteration_count, " \t",
-          time_with_kd / iteration_count, ", ", average_accuracy_with_kd / iteration_count,
-          " \t ", SVM_time / iteration_count, ", ", average_accuracy_svm / iteration_count)
+    print(pop_size,
+          " \t ", time_with_kd_CSA / iteration_count, ", ", average_accuracy_with_kd_CSA / iteration_count,
+          " \t ", time_with_kd_GA / iteration_count, ", ", average_accuracy_with_kd_GA / iteration_count,
+          " \t ", time_with_kd / iteration_count, ", ", average_accuracy_with_kd / iteration_count,
+          " \t ", SVM_time / iteration_count, ", ", average_accuracy_svm / iteration_count
+          )
 print("")
