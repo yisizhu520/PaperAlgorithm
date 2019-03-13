@@ -295,7 +295,7 @@ def test_accuracy(antibodies, test_data, parameters):
     return float(correct_count) / float(len(test_data))
 
 
-def test_accuracy_by_class(antibodies, test_data, parameters, training_set, pop_size, sequence):
+def test_accuracy_by_class(antibodies, test_data, parameters, training_set, pop_size, sequence, prefix):
     classes_data_dict = {}
     error_count = 0
     correct_count = 0
@@ -342,7 +342,7 @@ def test_accuracy_by_class(antibodies, test_data, parameters, training_set, pop_
         ['summary', float(correct_count) / float(len(test_data)), len(test_data), len(training_set), len(antibodies)])
     printTable(table)
     df = pandas.DataFrame(table)
-    df.to_csv('class_accuray_' + str(pop_size) + '_' + str(sequence) + '.csv', index=False, header=False)
+    df.to_csv('class_accuracy/'+prefix+'_class_accuracy_' + str(pop_size) + '_' + str(sequence) + '.csv', index=False, header=False)
     return float(correct_count) / float(len(test_data))
 
 
@@ -630,34 +630,34 @@ def get_class_prob(data, antibodies, parameters):
     return result
 
 
-def test_accuracy_by_class(antibodies, test_data, parameters):
-    error_count = 0
-    correct_count = 0
-    class_accuracy_dict = {}
-    class_total_dict = {}
-    classes = get_class_labels(test_data)
-    for c in classes:
-        class_accuracy_dict[c] = 0
-        class_total_dict[c] = 0
-
-    for x in test_data:
-        yhat = predict(antibodies, x, parameters)
-        # yhat = predictByVote(antibodies, x, parameters)
-        class_total_dict[x[0]] = class_total_dict[x[0]] + 1
-        if x[0] != yhat:
-            error_count = error_count + 1
-            # print ("predicted: ", yhat, " actual: ", x[0], "\t\t#")
-        else:
-            correct_count = correct_count + 1
-            class_accuracy_dict[x[0]] = class_accuracy_dict[x[0]] + 1
-            # print ("predicted: ", yhat, " actual: ", x[0])
-    for c in class_accuracy_dict:
-        prob = 0
-        if class_total_dict[c] != 0:
-            prob = class_accuracy_dict[c] / float(class_total_dict[c])
-        print(c + ', ' + str(prob))
-
-    return float(correct_count) / float(len(test_data))
+# def test_accuracy_by_class(antibodies, test_data, parameters):
+#     error_count = 0
+#     correct_count = 0
+#     class_accuracy_dict = {}
+#     class_total_dict = {}
+#     classes = get_class_labels(test_data)
+#     for c in classes:
+#         class_accuracy_dict[c] = 0
+#         class_total_dict[c] = 0
+#
+#     for x in test_data:
+#         yhat = predict(antibodies, x, parameters)
+#         # yhat = predictByVote(antibodies, x, parameters)
+#         class_total_dict[x[0]] = class_total_dict[x[0]] + 1
+#         if x[0] != yhat:
+#             error_count = error_count + 1
+#             # print ("predicted: ", yhat, " actual: ", x[0], "\t\t#")
+#         else:
+#             correct_count = correct_count + 1
+#             class_accuracy_dict[x[0]] = class_accuracy_dict[x[0]] + 1
+#             # print ("predicted: ", yhat, " actual: ", x[0])
+#     for c in class_accuracy_dict:
+#         prob = 0
+#         if class_total_dict[c] != 0:
+#             prob = class_accuracy_dict[c] / float(class_total_dict[c])
+#         print(c + ', ' + str(prob))
+#
+#     return float(correct_count) / float(len(test_data))
 
 
 def get_class_cost(data, training_set):
@@ -844,28 +844,28 @@ for pop_size in range(200, 1000, 100):
         test_set = get_data_not_in_classes(test_set, training_set)
         start = time.time()
         print('meta cost and small class accuracy:')
-        accuracy = test_accuracy_by_class(csa_antibodies, test_set, parameters)
+        accuracy = test_accuracy_by_class(csa_antibodies, test_set, parameters, training_set, pop_size, st, 'new')
         # accuracy = test_accuracy(csa_antibodies, test_set, parameters)
         end = time.time()
         time_with_kd_CSA = time_with_kd_CSA + (float(end) - float(start))
         average_accuracy_with_kd_CSA = average_accuracy_with_kd_CSA + accuracy
 
         # test without CSA
-        antibodies = generate_population_by_metacost_and_small_sample(training_set, classes, pop_size, parameters)
-        # print('fitness-- %d', cal_fitness(antibodies, training_set))
-        start = time.time()
-        print('meta cost class accuracy:')
-        accuracy = test_accuracy_by_class(antibodies, test_set, parameters)
-        # accuracy = test_accuracy(antibodies, test_set, parameters)
-        end = time.time()
-        time_with_kd = time_with_kd + (float(end) - float(start))
-        average_accuracy_with_kd = average_accuracy_with_kd + accuracy
+        # antibodies = generate_population_by_metacost_and_small_sample(training_set, classes, pop_size, parameters)
+        # # print('fitness-- %d', cal_fitness(antibodies, training_set))
+        # start = time.time()
+        # print('meta cost class accuracy:')
+        # accuracy = test_accuracy_by_class(antibodies, test_set, parameters)
+        # # accuracy = test_accuracy(antibodies, test_set, parameters)
+        # end = time.time()
+        # time_with_kd = time_with_kd + (float(end) - float(start))
+        # average_accuracy_with_kd = average_accuracy_with_kd + accuracy
 
         # test with GA
         ga_antibodies = generate_population_by_number_ratio(training_set, classes, pop_size, parameters)
         start = time.time()
         print('normal class accuracy:')
-        accuracy = test_accuracy_by_class(ga_antibodies, test_set, parameters)
+        accuracy = test_accuracy_by_class(ga_antibodies, test_set, parameters, training_set, pop_size, st, 'normal')
         # accuracy = test_accuracy(ga_antibodies, test_set, parameters)
         # accuracy = test_accuracy_by_class(ga_antibodies, test_set, parameters, training_set, pop_size, st)
         end = time.time()
