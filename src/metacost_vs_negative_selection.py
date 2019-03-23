@@ -1,13 +1,13 @@
 from data_processor import *
-import algorithm.BoundaryCalculation as BoundaryCalculation
+import algorithm.MetaCost as Metacost
 import algorithm.NegativeSelection as NegativeSelection
 
 parameters = get_default_parameters()
 
 output_vs_csv(NegativeSelection.generate_population,
-              BoundaryCalculation.generate_population,
+              Metacost.generate_population,
               'nsl-kddcup_1k.csv',
-              'boundary_vs_negative_selection.csv',
+              'metacost_vs_negative_selection.csv',
               parameters)
 
 
