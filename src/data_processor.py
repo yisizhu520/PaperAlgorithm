@@ -14,6 +14,7 @@ def get_default_parameters():
     parameters['iteration_count'] = 3
     return parameters
 
+
 def normalize(data):
     # cycling through each feature, but not the class label
     for i in range(len(data[0][1])):
@@ -68,18 +69,28 @@ def getdata(file_name):
     return rowdata
 
 
-def prepare_data(original_data, classes):
+def prepare_data(original_data, classes, fold_count):
     data = []
     for c in classes:
         class_data = [d for d in original_data if d[0] == c]
         shuffle(class_data)
         data = data + class_data
     data = normalize(data)
-    data = stratify(data, 10)
+    data = stratify(data, fold_count)
     return data
 
 
+def clean_test_data(test_data, training_data):
+    result = []
+    training_classes = get_class_labels(training_data)
+    for data in test_data:
+        if data[0] in training_classes:
+            result.append(data)
+    return result
+
+
 def get_accuracy_by_class(antibodies, test_data, training_set):
+    test_data = clean_test_data(test_data, training_set)
     classes_data_dict = {}
     error_count = 0
     correct_count = 0
@@ -100,7 +111,8 @@ def get_accuracy_by_class(antibodies, test_data, training_set):
 
     classes_antibody_dict = get_class_antibody_dict(antibodies)
     class_result_dict = {}
-
+    fmeasure_sum = 0.0
+    gmean_sum = 0.0
     for cls in classes_data_dict:
         class_result_dict[cls] = {}
         data = classes_data_dict[cls]
@@ -122,11 +134,18 @@ def get_accuracy_by_class(antibodies, test_data, training_set):
         class_result_dict[cls]['test-count'] = len(data)
         class_result_dict[cls]['train-count'] = train_count
         class_result_dict[cls]['anti-count'] = anti_count
+        eva_indicator = get_evaluation_indicator(antibodies, test_data, cls)
+        class_result_dict[cls]['fmeasure'] = eva_indicator['fmeasure']
+        class_result_dict[cls]['gmean'] = eva_indicator['gmean']
+        fmeasure_sum += eva_indicator['fmeasure']
+        gmean_sum += eva_indicator['gmean']
     class_result_dict['summary'] = {}
     class_result_dict['summary']['accuracy'] = float(correct_count) / float(len(test_data))
     class_result_dict['summary']['test-count'] = len(test_data)
     class_result_dict['summary']['train-count'] = len(training_set)
     class_result_dict['summary']['anti-count'] = len(antibodies)
+    class_result_dict['summary']['fmeasure'] = fmeasure_sum / len(classes_data_dict)
+    class_result_dict['summary']['gmean'] = gmean_sum / len(classes_data_dict)
     return class_result_dict
 
 
@@ -149,7 +168,7 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
     for pop_size in range(pop_min_size, pop_max_size + pop_size_increment, pop_size_increment):
         # building a balanced data set
 
-        data = prepare_data(original_data, classes)
+        data = prepare_data(original_data, classes, iteration_count)
         class_dict = {}
         key_before = '{}-before-accuracy'.format(pop_size)
         key_after = '{}-after-accuracy'.format(pop_size)
@@ -157,8 +176,13 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
         key_train_count = 'train-count'
         key_before_anti_count = '{}-before-anti-count'.format(pop_size)
         key_after_anti_count = '{}-after-anti-count'.format(pop_size)
+        key_before_fmeasure = '{}-before-fmeasure'.format(pop_size)
+        key_after_fmeasure = '{}-after-fmeasure'.format(pop_size)
+        key_before_gmean = '{}-before-gmean'.format(pop_size)
+        key_after_gmean = '{}-after-gmean'.format(pop_size)
 
-        headers += [key_before, key_after, key_before_anti_count, key_after_anti_count]
+        headers += [key_before, key_after, key_before_anti_count, key_after_anti_count,
+                    key_before_fmeasure, key_after_fmeasure, key_before_gmean, key_after_gmean]
 
         dict = {}
         dict[key_before] = 0.0
@@ -167,20 +191,25 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
         dict[key_train_count] = 0
         dict[key_before_anti_count] = 0
         dict[key_after_anti_count] = 0
+        dict[key_before_fmeasure] = 0
+        dict[key_after_fmeasure] = 0
+        dict[key_before_gmean] = 0
+        dict[key_after_gmean] = 0
         for cls in classes_with_summary:
             class_dict[cls] = copy.deepcopy(dict)
         for st in range(iteration_count):
             test_set = data[st % len(data)]
-            validation_set = data[(st + 1) % len(data)]
             training_set = []
-            for tsp in range(len(data) - 2):
+            for tsp in range(len(data) - 1):
                 training_set = training_set + data[(st + 2 + tsp) % len(data)]
 
             old_antibodies = before_func(training_set, classes, pop_size, parameters)
             result_before = get_accuracy_by_class(old_antibodies, test_set, training_set)
+            print('result_before-' + str(st) + '-popsize-' + str(pop_size))
 
             new_antibodies = after_func(training_set, classes, pop_size, parameters)
             result_after = get_accuracy_by_class(new_antibodies, test_set, training_set)
+            print('result_after-' + str(st) + '-popsize-' + str(pop_size))
 
             for cls in classes_with_summary:
                 if cls in result_before:
@@ -188,9 +217,13 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
                     class_dict[cls][key_test_count] += result_before[cls]['test-count'] / float(iteration_count)
                     class_dict[cls][key_train_count] += result_before[cls]['train-count'] / float(iteration_count)
                     class_dict[cls][key_before_anti_count] += result_before[cls]['anti-count'] / float(iteration_count)
+                    class_dict[cls][key_before_fmeasure] += result_before[cls]['fmeasure'] / float(iteration_count)
+                    class_dict[cls][key_before_gmean] += result_before[cls]['gmean'] / float(iteration_count)
                 if cls in result_after:
                     class_dict[cls][key_after] += result_after[cls]['accuracy'] / float(iteration_count)
                     class_dict[cls][key_after_anti_count] += result_after[cls]['anti-count'] / float(iteration_count)
+                    class_dict[cls][key_after_fmeasure] += result_after[cls]['fmeasure'] / float(iteration_count)
+                    class_dict[cls][key_after_gmean] += result_after[cls]['gmean'] / float(iteration_count)
 
         for cls in classes_with_summary:
             class_dict[cls][key_test_count] = int(class_dict[cls][key_test_count])
