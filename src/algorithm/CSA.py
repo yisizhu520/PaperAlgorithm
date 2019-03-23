@@ -1,8 +1,27 @@
-from algorithm.NegativeSelection import *
+import algorithm.NegativeSelection as NegativeSelection
+import copy
+from algorithm.base import *
+from random import choice
+
+# 迭代次数G，初始种群数量M，选择率S，克隆比例C，检测器总数量为N，类别数量C
+G = 3
+M = 5
+S = 0.3
+C = 5
+# TODO 检测器数量为N，CSA迭代次数也为N？
+N = 10
 
 
-def get_best_population_with_csa(init_antibodies_set, training_set, classes, size, parameters, chooses_ratio,
-                                 clone_multiple_count):
+def generate_population(training_set, classes, size, parameters):
+    init_antibodies_set = []
+    for i in range(M):
+        # Step5：重复执行2 - 4的过程M次，得到克隆选择过程的初始解空间
+        init_antibodies_set.append(NegativeSelection.generate_population(training_set, classes, size, parameters))
+    return get_best_population_with_csa(init_antibodies_set, training_set, classes, size, parameters, S, C)
+
+
+def get_best_population_with_csa(init_antibodies_set, training_set, classes, size, parameters, chooses_ratio=0.3,
+                                 clone_multiple_count=5):
     iteration_time = size
     save_count = 5
     accuracy = 0.000001
@@ -137,7 +156,7 @@ def reproduce_antibodies(antibodies, percent, training_set, classes, parameters)
         for i in range(remove_size):
             antis.remove(choice(antis))
     # reproduce percent of antibodies
-    reproduced_pops = generate_population(training_set, classes, int(len(antibodies) * percent), parameters)
+    reproduced_pops = NegativeSelection.generate_population(training_set, classes, int(len(antibodies) * percent), parameters)
     new_antis = []
     for cls in classes_antibody_dict:
         for a in classes_antibody_dict[cls]:

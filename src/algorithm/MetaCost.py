@@ -1,11 +1,15 @@
 import copy
+import algorithm.NegativeSelection as NegativeSelection
+from algorithm.base import *
 
-from algorithm.NegativeSelection import *
+
+def generate_population(training_set, classes, size, parameters):
+    init_antibodies = NegativeSelection.generate_population(training_set, classes, size, parameters)
+    return generate_population_with_antibodies(init_antibodies, training_set, classes, size, parameters)
 
 
-def generate_population_by_metacost(training_set, classes, size, parameters):
+def generate_population_with_antibodies(init_antibodies, training_set, classes, size, parameters):
     training_set = copy.deepcopy(training_set)
-    init_antibodies = generate_population(training_set, classes, size, parameters)
 
     for data in training_set:
         # Step3：使用检测器检测所有样本，得到样本基于每一类的先验概率
@@ -21,7 +25,7 @@ def generate_population_by_metacost(training_set, classes, size, parameters):
             # print('origin class is ' + data[0] + ', real class is ' + real_class)
             data[0] = real_class
 
-    return generate_population(training_set, classes, size, parameters)
+    return NegativeSelection.generate_population(training_set, classes, size, parameters)
 
 
 def get_class_prob(data, antibodies):

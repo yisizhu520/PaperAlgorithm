@@ -8,7 +8,6 @@ def generate_population(training_set, classes, size, parameters):
     return generate_population_with_antibodies(init_antis, training_set, parameters)
 
 
-
 def generate_population_with_antibodies(init_antibodies, training_set, parameters):
     # not_hit_set = get_not_hit_data(init_antibodies, training_set)
     # the count which is more than 10% of total data is major class
