@@ -3,6 +3,8 @@ from algorithm.base import *
 from random import shuffle
 import pandas as pd
 import copy
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
 
 
 def get_default_parameters():
@@ -89,7 +91,7 @@ def clean_test_data(test_data, training_data):
     return result
 
 
-def get_accuracy_by_class(antibodies, test_data, training_set):
+def get_evaluation_data_by_class(antibodies, test_data, training_set):
     test_data = clean_test_data(test_data, training_set)
     classes_data_dict = {}
     error_count = 0
@@ -113,6 +115,8 @@ def get_accuracy_by_class(antibodies, test_data, training_set):
     class_result_dict = {}
     fmeasure_sum = 0.0
     gmean_sum = 0.0
+    TPR_sum = 0.0
+    FPR_sum = 0.0
     for cls in classes_data_dict:
         class_result_dict[cls] = {}
         data = classes_data_dict[cls]
@@ -137,8 +141,12 @@ def get_accuracy_by_class(antibodies, test_data, training_set):
         eva_indicator = get_evaluation_indicator(antibodies, test_data, cls)
         class_result_dict[cls]['fmeasure'] = eva_indicator['fmeasure']
         class_result_dict[cls]['gmean'] = eva_indicator['gmean']
+        class_result_dict[cls]['TPR'] = eva_indicator['TPR']
+        class_result_dict[cls]['FPR'] = eva_indicator['FPR']
         fmeasure_sum += eva_indicator['fmeasure']
         gmean_sum += eva_indicator['gmean']
+        TPR_sum += eva_indicator['TPR']
+        FPR_sum += eva_indicator['FPR']
     class_result_dict['summary'] = {}
     class_result_dict['summary']['accuracy'] = float(correct_count) / float(len(test_data))
     class_result_dict['summary']['test-count'] = len(test_data)
@@ -146,10 +154,12 @@ def get_accuracy_by_class(antibodies, test_data, training_set):
     class_result_dict['summary']['anti-count'] = len(antibodies)
     class_result_dict['summary']['fmeasure'] = fmeasure_sum / len(classes_data_dict)
     class_result_dict['summary']['gmean'] = gmean_sum / len(classes_data_dict)
+    class_result_dict['summary']['TPR'] = TPR_sum / len(classes_data_dict)
+    class_result_dict['summary']['FPR'] = FPR_sum / len(classes_data_dict)
     return class_result_dict
 
 
-def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
+def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, parameters):
     # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
     original_data = getdata('../data/' + data_name)
     classes = get_class_labels(original_data)
@@ -197,6 +207,10 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
         dict[key_after_gmean] = 0
         for cls in classes_with_summary:
             class_dict[cls] = copy.deepcopy(dict)
+
+        # {class:{before:{tpr:[],fpr:[]},after:{tpr:[],fpr:[]}}
+        chart_dict = {'before': {'TPR': [], 'FPR': []}, 'after': {'TPR': [], 'FPR': []}}
+
         for st in range(iteration_count):
             test_set = data[st % len(data)]
             training_set = []
@@ -204,11 +218,11 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
                 training_set = training_set + data[(st + 2 + tsp) % len(data)]
 
             old_antibodies = before_func(training_set, classes, pop_size, parameters)
-            result_before = get_accuracy_by_class(old_antibodies, test_set, training_set)
+            result_before = get_evaluation_data_by_class(old_antibodies, test_set, training_set)
             print('result_before-' + str(st) + '-popsize-' + str(pop_size))
 
             new_antibodies = after_func(training_set, classes, pop_size, parameters)
-            result_after = get_accuracy_by_class(new_antibodies, test_set, training_set)
+            result_after = get_evaluation_data_by_class(new_antibodies, test_set, training_set)
             print('result_after-' + str(st) + '-popsize-' + str(pop_size))
 
             for cls in classes_with_summary:
@@ -225,6 +239,15 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
                     class_dict[cls][key_after_fmeasure] += result_after[cls]['fmeasure'] / float(iteration_count)
                     class_dict[cls][key_after_gmean] += result_after[cls]['gmean'] / float(iteration_count)
 
+            # collect roc chart data
+            chart_dict['before']['TPR'].append(result_before['summary']['TPR'])
+            chart_dict['before']['FPR'].append(result_before['summary']['FPR'])
+            chart_dict['after']['TPR'].append(result_after['summary']['TPR'])
+            chart_dict['after']['FPR'].append(result_after['summary']['FPR'])
+
+        # generate roc chart
+        generate_roc_chart(chart_dict, file_name, pop_size)
+
         for cls in classes_with_summary:
             class_dict[cls][key_test_count] = int(class_dict[cls][key_test_count])
             class_dict[cls][key_train_count] = int(class_dict[cls][key_train_count])
@@ -237,5 +260,45 @@ def output_vs_csv(before_func, after_func, data_name, csv_name, parameters):
 
     df = pd.DataFrame.from_dict(pop_class_dict, orient='index', columns=headers)
     df.sort_values(by='test-count', ascending=False, inplace=True)
-    df.to_csv('../result/' + csv_name, index=False, header=True)
-    print('../result/' + csv_name + " finished")
+    df.to_csv('../result/' + file_name + '.csv', index=False, header=True)
+    print('../result/' + file_name + " finished")
+
+
+def generate_roc_chart(chart_dict, file_name, pop_size):
+    # 计算auc的值
+    before_FPRs, before_TPRs, = format_fpr_tpr(chart_dict['before']['FPR'], chart_dict['before']['TPR'])
+    after_FPRs, after_TPRs, = format_fpr_tpr(chart_dict['after']['FPR'], chart_dict['after']['TPR'])
+    roc_auc_before = auc(before_FPRs, before_TPRs)
+    roc_auc_after = auc(after_FPRs, after_TPRs)
+    plt.figure()
+    lw = 2
+    plt.figure(figsize=(10, 10))
+    # 假正率为横坐标，真正率为纵坐标做曲线
+    plt.plot(before_FPRs, before_TPRs, color='darkorange',
+             lw=lw, label='before (AUC area = %0.2f)' % roc_auc_before)
+    plt.plot(after_FPRs, after_TPRs, color='green',
+             lw=lw, label='after (AUC area = %0.2f)' % roc_auc_after)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(file_name)
+    plt.legend(loc="lower right")
+    plt.savefig('../result/{}-{}.png'.format(pop_size, file_name))
+    plt.show()
+
+
+def format_fpr_tpr(fprs, tprs):
+    dict = {}
+    for i in range(len(fprs)):
+        dict[fprs[i]] = tprs[i]
+    fprs = sorted(fprs)
+    new_tprs = []
+    for i in range(len(tprs)):
+        new_tprs.append(dict[fprs[i]])
+    fprs.insert(0, 0)
+    fprs.append(1)
+    new_tprs.insert(0, 0)
+    new_tprs.append(1)
+    return fprs, new_tprs

@@ -2,6 +2,7 @@ from algorithm.base import *
 import math
 from operator import itemgetter
 
+
 def distance(x1, x2):
     if len(x1) != len(x2):
         return False
@@ -58,4 +59,48 @@ def get_class_antibody_dict(antibodies):
     return classes_antibody_dict
 
 
+def get_evaluation_indicator(antibodies, test_data, class_label):
+    TP, TN, FP, FN = 0, 0, 0, 0
+    SE, SP, TPR, FPR = 0, 0, 0, 0
+    for x in test_data:
+        if x[0] == class_label:
+            yhat = predict(antibodies, x)
+            if x[0] == yhat:
+                TP += 1
+            else:
+                FN += 1
+        else:
+            yhat = predict(antibodies, x)
+            if yhat == class_label:
+                FP += 1
+            else:
+                TN += 1
 
+    # print (TP, TN, FP, FN)
+    if float(TP + FP) != 0:
+        precision = float(TP) / float(TP + FP)
+    else:
+        precision = 0.0
+    if float(TP + FN) != 0:
+        recall = float(TP) / float(TP + FN)
+    else:
+        recall = 0.0
+    if float(FP + TN) != 0:
+        FPR = float(FP) / float(FP + TN)
+        SP = float(TN) / float(FP + TN)
+    else:
+        FPR = 0.0
+        SP = 0.0
+    if (precision + recall) != 0:
+        fmeasure = 2 * ((precision * recall) / (precision + recall))
+    else:
+        fmeasure = 0.0
+
+    SE = TPR = recall
+    gmean = math.sqrt(SE * SP)
+    return {
+        'fmeasure': fmeasure,
+        'gmean': gmean,
+        'TPR': TPR,
+        'FPR': FPR,
+    }
