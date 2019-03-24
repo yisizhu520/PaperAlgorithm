@@ -3,6 +3,15 @@ import math
 from operator import itemgetter
 
 
+def separate(data):
+    labels = []
+    dataa = []
+    for i in data:
+        labels.append(i[0])
+        dataa.append(i[1:])
+    return [labels, dataa]
+
+
 def distance(x1, x2):
     if len(x1) != len(x2):
         return False

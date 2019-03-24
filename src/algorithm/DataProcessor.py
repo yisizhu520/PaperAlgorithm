@@ -5,6 +5,8 @@ import pandas as pd
 import copy
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
+import algorithm.OtherAlgorithm as OtherAlgorithm
+import algorithm.NegativeSelection as NegativeSelection
 
 
 def get_default_parameters():
@@ -15,6 +17,21 @@ def get_default_parameters():
     parameters['pop_max_size'] = 300
     parameters['iteration_count'] = 3
     return parameters
+
+
+def format_fpr_tpr(fprs, tprs):
+    dict = {}
+    for i in range(len(fprs)):
+        dict[fprs[i]] = tprs[i]
+    fprs = sorted(fprs)
+    new_tprs = []
+    for i in range(len(tprs)):
+        new_tprs.append(dict[fprs[i]])
+    fprs.insert(0, 0)
+    fprs.append(1)
+    new_tprs.insert(0, 0)
+    new_tprs.append(1)
+    return fprs, new_tprs
 
 
 def normalize(data):
@@ -159,6 +176,66 @@ def get_evaluation_data_by_class(antibodies, test_data, training_set):
     return class_result_dict
 
 
+def compare_with_other_algorithm(data_name, file_name, parameters):
+    iteration_count = parameters['iteration_count']
+    pop_size = parameters['pop_size']
+    original_data = getdata('../data/' + data_name)
+    classes = get_class_labels(original_data)
+    data = prepare_data(original_data, classes, iteration_count)
+    other_algorithms = ['svm', 'naive_bayes', 'decision_tree', 'neural_network']
+    chart_dict = {'nega': {'TPR': [], 'FPR': []}}
+    for algo in other_algorithms:
+        chart_dict[algo] = {'TPR': [], 'FPR': []}
+
+    for st in range(iteration_count):
+        test_set = data[st % len(data)]
+        training_set = []
+        for tsp in range(len(data) - 1):
+            training_set = training_set + data[(st + 2 + tsp) % len(data)]
+
+        old_antibodies = NegativeSelection.generate_population(training_set, classes, pop_size, parameters)
+        result_nega = get_evaluation_data_by_class(old_antibodies, test_set, training_set)
+        # collect roc chart data
+        chart_dict['nega']['TPR'].append(result_nega['summary']['TPR'])
+        chart_dict['nega']['FPR'].append(result_nega['summary']['FPR'])
+        chart_dict['nega']['fmeasure'] = result_nega['summary']['fmeasure']
+        chart_dict['nega']['gmean'] = result_nega['summary']['gmean']
+        for algo in other_algorithms:
+            result_other = OtherAlgorithm.get_evaluation_indicator(algo, training_set, test_set)
+            chart_dict[algo]['TPR'].append(result_other['TPR'])
+            chart_dict[algo]['FPR'].append(result_other['FPR'])
+            chart_dict[algo]['fmeasure'] = result_other['fmeasure']
+            chart_dict[algo]['gmean'] = result_other['gmean']
+
+    plt.figure()
+    lw = 2
+    plt.figure(figsize=(40, 40))
+    other_algorithms.insert(0, 'nega')
+    colors = ['aqua', 'darkorange', 'cornflowerblue', 'deeppink', 'navy']
+    for i in range(len(other_algorithms)):
+        algo = other_algorithms[i]
+        chart_dict[algo]['algorithm'] = algo
+        FPRs, TPRs = format_fpr_tpr(chart_dict[algo]['FPR'], chart_dict[algo]['TPR'])
+        roc_auc = auc(FPRs, TPRs)
+        plt.plot(FPRs, TPRs, color=colors[i],
+                 lw=lw, label='%s (area = %0.2f)' % (algo, roc_auc))
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(file_name)
+    plt.legend(loc="lower right")
+    plt.savefig('../result/{}.png'.format(file_name))
+    plt.show()
+
+    headers = ['algorithm', 'fmeasure', 'gmean']
+    df = pd.DataFrame.from_dict(chart_dict, orient='index', columns=headers)
+    df.sort_values(by='fmeasure', ascending=False, inplace=True)
+    df.to_csv('../result/' + file_name + '.csv', index=False, header=True)
+    print('../result/' + file_name + " finished")
+
+
 def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, parameters):
     # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
     original_data = getdata('../data/' + data_name)
@@ -287,18 +364,3 @@ def generate_roc_chart(chart_dict, file_name, pop_size):
     plt.legend(loc="lower right")
     plt.savefig('../result/{}-{}.png'.format(pop_size, file_name))
     plt.show()
-
-
-def format_fpr_tpr(fprs, tprs):
-    dict = {}
-    for i in range(len(fprs)):
-        dict[fprs[i]] = tprs[i]
-    fprs = sorted(fprs)
-    new_tprs = []
-    for i in range(len(tprs)):
-        new_tprs.append(dict[fprs[i]])
-    fprs.insert(0, 0)
-    fprs.append(1)
-    new_tprs.insert(0, 0)
-    new_tprs.append(1)
-    return fprs, new_tprs

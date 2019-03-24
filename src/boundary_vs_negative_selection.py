@@ -1,4 +1,4 @@
-from data_processor import *
+from algorithm.DataProcessor import *
 import algorithm.BoundaryCalculation as BoundaryCalculation
 import algorithm.NegativeSelection as NegativeSelection
 

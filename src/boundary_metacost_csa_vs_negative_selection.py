@@ -1,4 +1,4 @@
-from data_processor import *
+from algorithm.DataProcessor import *
 import algorithm.BoundaryMetacostCSA as BoundaryMetacostCSA
 import algorithm.NegativeSelection as NegativeSelection
 
