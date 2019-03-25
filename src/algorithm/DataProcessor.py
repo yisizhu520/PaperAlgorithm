@@ -179,7 +179,7 @@ def get_evaluation_data_by_class(antibodies, test_data, training_set):
 def compare_with_other_algorithm(data_name, file_name, parameters):
     iteration_count = parameters['iteration_count']
     pop_size = parameters['pop_size']
-    original_data = getdata('../data/' + data_name)
+    original_data = getdata('data/' + data_name)
     classes = get_class_labels(original_data)
     data = prepare_data(original_data, classes, iteration_count)
     other_algorithms = ['svm', 'naive_bayes', 'decision_tree', 'neural_network']
@@ -209,36 +209,38 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
 
     plt.figure()
     lw = 2
-    plt.figure(figsize=(40, 40))
+    plt.figure(figsize=(10, 10))
     other_algorithms.insert(0, 'nega')
     colors = ['aqua', 'darkorange', 'cornflowerblue', 'deeppink', 'navy']
+    line_styles = ['solid', 'dashed', 'dashdot', 'dotted', 'solid']
+    line_widths = [1, 1, 1, 1, 2]
     for i in range(len(other_algorithms)):
         algo = other_algorithms[i]
         chart_dict[algo]['algorithm'] = algo
         FPRs, TPRs = format_fpr_tpr(chart_dict[algo]['FPR'], chart_dict[algo]['TPR'])
         roc_auc = auc(FPRs, TPRs)
-        plt.plot(FPRs, TPRs, color=colors[i],
-                 lw=lw, label='%s (area = %0.2f)' % (algo, roc_auc))
-    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+        plt.plot(FPRs, TPRs, color=colors[i], linestyle=line_styles[i],
+                 lw=lw, label='%s (area = %0.2f)' % (algo, roc_auc), linewidth=line_widths[i])
+    # plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
-    plt.savefig('../result/{}.png'.format(file_name))
+    plt.savefig('result/{}.png'.format(file_name))
     plt.show()
 
     headers = ['algorithm', 'fmeasure', 'gmean']
     df = pd.DataFrame.from_dict(chart_dict, orient='index', columns=headers)
     df.sort_values(by='fmeasure', ascending=False, inplace=True)
-    df.to_csv('../result/' + file_name + '.csv', index=False, header=True)
-    print('../result/' + file_name + " finished")
+    df.to_csv('result/' + file_name + '.csv', index=False, header=True)
+    print('result/' + file_name + " finished")
 
 
 def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, parameters):
     # new structure of antibody: [ class, [x1, x2, x3,... ], radius]
-    original_data = getdata('../data/' + data_name)
+    original_data = getdata('data/' + data_name)
     classes = get_class_labels(original_data)
     pop_min_size = parameters['pop_min_size']
     pop_size_increment = parameters['pop_size_increment']
@@ -337,8 +339,8 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
 
     df = pd.DataFrame.from_dict(pop_class_dict, orient='index', columns=headers)
     df.sort_values(by='test-count', ascending=False, inplace=True)
-    df.to_csv('../result/' + file_name + '.csv', index=False, header=True)
-    print('../result/' + file_name + " finished")
+    df.to_csv('result/' + file_name + '.csv', index=False, header=True)
+    print('result/' + file_name + " finished")
 
 
 def generate_roc_chart(chart_dict, file_name, pop_size):
@@ -352,15 +354,15 @@ def generate_roc_chart(chart_dict, file_name, pop_size):
     plt.figure(figsize=(10, 10))
     # 假正率为横坐标，真正率为纵坐标做曲线
     plt.plot(before_FPRs, before_TPRs, color='darkorange',
-             lw=lw, label='before (AUC area = %0.2f)' % roc_auc_before)
+             lw=lw, label='before (AUC area = %0.2f)' % roc_auc_before, linestyle='solid')
     plt.plot(after_FPRs, after_TPRs, color='green',
-             lw=lw, label='after (AUC area = %0.2f)' % roc_auc_after)
-    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+             lw=lw, label='after (AUC area = %0.2f)' % roc_auc_after, linestyle='dashed')
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='dotted')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
-    plt.savefig('../result/{}-{}.png'.format(pop_size, file_name))
+    plt.savefig('result/{}-{}.png'.format(pop_size, file_name))
     plt.show()
