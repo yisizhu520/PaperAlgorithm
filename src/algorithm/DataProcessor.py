@@ -16,8 +16,8 @@ def get_default_parameters():
     parameters["step_size"] = 0.1
     parameters['pop_min_size'] = 100
     parameters['pop_size_increment'] = 100
-    parameters['pop_max_size'] = 300
-    parameters['iteration_count'] = 3
+    parameters['pop_max_size'] = 200
+    parameters['iteration_count'] = 2
     return parameters
 
 
@@ -272,6 +272,7 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
         pop_class_dict[cls] = {}
 
     headers = ['class', 'train-count', 'test-count']
+    pop_chart_dict = {}
     for pop_size in range(pop_min_size, pop_max_size + pop_size_increment, pop_size_increment):
         # building a balanced data set
 
@@ -342,8 +343,7 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
             chart_dict['after']['TPR'].append(result_after['summary']['TPR'])
             chart_dict['after']['FPR'].append(result_after['summary']['FPR'])
 
-        # generate roc chart
-        generate_roc_chart(chart_dict, file_name, pop_size)
+        pop_chart_dict[pop_size] = chart_dict
 
         for cls in classes_with_summary:
             class_dict[cls][key_test_count] = int(class_dict[cls][key_test_count])
@@ -355,6 +355,9 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
             pop_class_dict[cls]['class'] = cls
             pop_class_dict[cls] = {**pop_class_dict[cls], **class_dict[cls]}
 
+    # generate roc chart
+    generate_roc_chart(pop_chart_dict, file_name)
+
     df = pd.DataFrame.from_dict(pop_class_dict, orient='index', columns=headers)
     df.sort_values(by='test-count', ascending=False, inplace=True)
     file = 'result/' + file_name + '.csv'
@@ -364,20 +367,30 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
     print('result/' + file_name + " finished")
 
 
-def generate_roc_chart(chart_dict, file_name, pop_size):
-    # 计算auc的值
-    before_FPRs, before_TPRs, = format_fpr_tpr(chart_dict['before']['FPR'], chart_dict['before']['TPR'])
-    after_FPRs, after_TPRs, = format_fpr_tpr(chart_dict['after']['FPR'], chart_dict['after']['TPR'])
-    roc_auc_before = auc(before_FPRs, before_TPRs)
-    roc_auc_after = auc(after_FPRs, after_TPRs)
+def generate_roc_chart(pop_chart_dict, file_name):
     plt.figure()
     lw = 2
     plt.figure(figsize=(10, 10))
-    # 假正率为横坐标，真正率为纵坐标做曲线
-    plt.plot(before_FPRs, before_TPRs, color='darkorange',
-             lw=lw, label='before (AUC area = %0.2f)' % roc_auc_before, linestyle='solid')
-    plt.plot(after_FPRs, after_TPRs, color='green',
-             lw=lw, label='after (AUC area = %0.2f)' % roc_auc_after, linestyle='dashed')
+    colors = ['aqua', 'darkorange']
+    line_styles = ['solid', 'dashed']
+    count = 1
+    x = []
+    y = []
+    for size in pop_chart_dict:
+        chart_dict = pop_chart_dict[size]
+        # 计算auc的值
+        before_FPRs, before_TPRs, = format_fpr_tpr(chart_dict['before']['FPR'], chart_dict['before']['TPR'])
+        after_FPRs, after_TPRs, = format_fpr_tpr(chart_dict['after']['FPR'], chart_dict['after']['TPR'])
+        x += before_FPRs + after_FPRs
+        y += before_TPRs + after_TPRs
+        roc_auc_before = auc(before_FPRs, before_TPRs)
+        roc_auc_after = auc(after_FPRs, after_TPRs)
+        # 假正率为横坐标，真正率为纵坐标做曲线
+        plt.plot(before_FPRs, before_TPRs, color='darkorange', linewidth=count,
+                 lw=lw, label='%d before (AUC area = %0.2f)' % (size, roc_auc_before), linestyle='solid')
+        plt.plot(after_FPRs, after_TPRs, color='green', linewidth=count,
+                 lw=lw, label='%d after (AUC area = %0.2f)' % (size, roc_auc_before), linestyle='dashed')
+        count += 1
     plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='dotted')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
@@ -385,8 +398,8 @@ def generate_roc_chart(chart_dict, file_name, pop_size):
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
-    file = 'result/{}-{}.png'.format(pop_size, file_name)
+    file = 'result/{}.png'.format(file_name)
     if os.path.exists(file):
         os.remove(file)
-    plt.savefig('result/{}-{}.png'.format(pop_size, file_name))
+    plt.savefig(file)
     # plt.show()
