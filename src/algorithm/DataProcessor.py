@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 import algorithm.OtherAlgorithm as OtherAlgorithm
 import algorithm.NegativeSelection as NegativeSelection
+import os
 
 
 def get_default_parameters():
@@ -228,12 +229,14 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
+    os.remove('result/{}.png'.format(file_name))
     plt.savefig('result/{}.png'.format(file_name))
     # plt.show()
 
     headers = ['algorithm', 'fmeasure', 'gmean']
     df = pd.DataFrame.from_dict(chart_dict, orient='index', columns=headers)
     df.sort_values(by='fmeasure', ascending=False, inplace=True)
+    os.remove('result/' + file_name + '.csv')
     df.to_csv('result/' + file_name + '.csv', index=False, header=True)
     print('result/' + file_name + " finished")
 
@@ -339,6 +342,7 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
 
     df = pd.DataFrame.from_dict(pop_class_dict, orient='index', columns=headers)
     df.sort_values(by='test-count', ascending=False, inplace=True)
+    os.remove('result/' + file_name + '.csv')
     df.to_csv('result/' + file_name + '.csv', index=False, header=True)
     print('result/' + file_name + " finished")
 
@@ -364,5 +368,6 @@ def generate_roc_chart(chart_dict, file_name, pop_size):
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
+    os.remove('result/{}-{}.png'.format(pop_size, file_name))
     plt.savefig('result/{}-{}.png'.format(pop_size, file_name))
     # plt.show()
