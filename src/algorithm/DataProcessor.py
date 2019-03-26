@@ -229,15 +229,19 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
-    os.remove('result/{}.png'.format(file_name))
-    plt.savefig('result/{}.png'.format(file_name))
+    file = 'result/{}.png'.format(file_name)
+    if os.path.exists(file):
+        os.remove(file)
+    plt.savefig(file)
     # plt.show()
 
     headers = ['algorithm', 'fmeasure', 'gmean']
     df = pd.DataFrame.from_dict(chart_dict, orient='index', columns=headers)
     df.sort_values(by='fmeasure', ascending=False, inplace=True)
-    os.remove('result/' + file_name + '.csv')
-    df.to_csv('result/' + file_name + '.csv', index=False, header=True)
+    file = 'result/' + file_name + '.csv'
+    if os.path.exists(file):
+        os.remove(file)
+    df.to_csv(file, index=False, header=True)
     print('result/' + file_name + " finished")
 
 
@@ -342,8 +346,10 @@ def output_vs_csv_and_chart(before_func, after_func, data_name, file_name, param
 
     df = pd.DataFrame.from_dict(pop_class_dict, orient='index', columns=headers)
     df.sort_values(by='test-count', ascending=False, inplace=True)
-    os.remove('result/' + file_name + '.csv')
-    df.to_csv('result/' + file_name + '.csv', index=False, header=True)
+    file = 'result/' + file_name + '.csv'
+    if os.path.exists(file):
+        os.remove(file)
+    df.to_csv(file, index=False, header=True)
     print('result/' + file_name + " finished")
 
 
@@ -368,6 +374,8 @@ def generate_roc_chart(chart_dict, file_name, pop_size):
     plt.ylabel('True Positive Rate')
     plt.title(file_name)
     plt.legend(loc="lower right")
-    os.remove('result/{}-{}.png'.format(pop_size, file_name))
+    file = 'result/{}-{}.png'.format(pop_size, file_name)
+    if os.path.exists(file):
+        os.remove(file)
     plt.savefig('result/{}-{}.png'.format(pop_size, file_name))
     # plt.show()
