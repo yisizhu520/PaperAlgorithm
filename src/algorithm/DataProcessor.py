@@ -8,6 +8,7 @@ from sklearn.metrics import roc_curve, auc
 import algorithm.OtherAlgorithm as OtherAlgorithm
 import algorithm.NegativeSelection as NegativeSelection
 import os
+import time
 
 
 def get_default_parameters():
@@ -135,17 +136,22 @@ def get_evaluation_data_by_class(antibodies, test_data, training_set):
     gmean_sum = 0.0
     TPR_sum = 0.0
     FPR_sum = 0.0
+    predict_time_sum = 0
     for cls in classes_data_dict:
         class_result_dict[cls] = {}
         data = classes_data_dict[cls]
         cls_correct_count = 0
+        predict_time = 0
         for x in data:
+            start_time = time.time()
             yhat = predict(antibodies, x)
+            predict_time += time.time() - start_time
             if x[0] != yhat:
                 error_count = error_count + 1
             else:
                 correct_count = correct_count + 1
                 cls_correct_count = cls_correct_count + 1
+
         train_count = 0
         anti_count = 0
         if cls in classes_train_data_dict:
@@ -156,6 +162,7 @@ def get_evaluation_data_by_class(antibodies, test_data, training_set):
         class_result_dict[cls]['test-count'] = len(data)
         class_result_dict[cls]['train-count'] = train_count
         class_result_dict[cls]['anti-count'] = anti_count
+        class_result_dict[cls]['predict_time'] = predict_time
         eva_indicator = get_evaluation_indicator(antibodies, test_data, cls)
         class_result_dict[cls]['fmeasure'] = eva_indicator['fmeasure']
         class_result_dict[cls]['gmean'] = eva_indicator['gmean']
@@ -165,6 +172,7 @@ def get_evaluation_data_by_class(antibodies, test_data, training_set):
         gmean_sum += eva_indicator['gmean']
         TPR_sum += eva_indicator['TPR']
         FPR_sum += eva_indicator['FPR']
+        predict_time_sum += predict_time
     class_result_dict['summary'] = {}
     class_result_dict['summary']['accuracy'] = float(correct_count) / float(len(test_data))
     class_result_dict['summary']['test-count'] = len(test_data)
@@ -174,6 +182,7 @@ def get_evaluation_data_by_class(antibodies, test_data, training_set):
     class_result_dict['summary']['gmean'] = gmean_sum / len(classes_data_dict)
     class_result_dict['summary']['TPR'] = TPR_sum / len(classes_data_dict)
     class_result_dict['summary']['FPR'] = FPR_sum / len(classes_data_dict)
+    class_result_dict['summary']['predict_time'] = predict_time_sum
     return class_result_dict
 
 
@@ -184,9 +193,9 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     classes = get_class_labels(original_data)
     data = prepare_data(original_data, classes, iteration_count)
     other_algorithms = ['svm', 'naive_bayes', 'decision_tree', 'neural_network', 'knn']
-    chart_dict = {'nega': {'TPR': [], 'FPR': []}}
+    chart_dict = {'nega': {'TPR': [], 'FPR': [], 'predict_time': 0}}
     for algo in other_algorithms:
-        chart_dict[algo] = {'TPR': [], 'FPR': []}
+        chart_dict[algo] = {'TPR': [], 'FPR': [], 'predict_time': 0}
 
     for st in range(iteration_count):
         test_set = data[st % len(data)]
@@ -201,12 +210,14 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
         chart_dict['nega']['FPR'].append(result_nega['summary']['FPR'])
         chart_dict['nega']['fmeasure'] = result_nega['summary']['fmeasure']
         chart_dict['nega']['gmean'] = result_nega['summary']['gmean']
+        chart_dict['nega']['predict_time'] += result_nega['summary']['predict_time'] / iteration_count
         for algo in other_algorithms:
             result_other = OtherAlgorithm.get_evaluation_indicator(algo, training_set, test_set)
             chart_dict[algo]['TPR'].append(result_other['TPR'])
             chart_dict[algo]['FPR'].append(result_other['FPR'])
             chart_dict[algo]['fmeasure'] = result_other['fmeasure']
             chart_dict[algo]['gmean'] = result_other['gmean']
+            chart_dict[algo]['predict_time'] += result_other['predict_time'] / iteration_count
 
     plt.figure()
     lw = 2
@@ -235,7 +246,7 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     plt.savefig(file)
     # plt.show()
 
-    headers = ['algorithm', 'fmeasure', 'gmean']
+    headers = ['algorithm', 'fmeasure', 'gmean', 'predict_time']
     df = pd.DataFrame.from_dict(chart_dict, orient='index', columns=headers)
     df.sort_values(by='fmeasure', ascending=False, inplace=True)
     file = 'result/' + file_name + '.csv'
