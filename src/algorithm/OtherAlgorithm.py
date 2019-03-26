@@ -22,11 +22,16 @@ def get_evaluation_indicator(algorithm, training_set, test_set):
     if algorithm == 'naive_bayes':
         model = naive_bayes.GaussianNB()  # 高斯贝叶斯
     elif algorithm == 'decision_tree':
-        model = tree.DecisionTreeClassifier()
+        model = tree.DecisionTreeClassifier(max_depth=3)
+        # model = tree.DecisionTreeClassifier(criterion=’gini’, max_depth = None,
+        # min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0,
+        # max_features = None, random_state = None, max_leaf_nodes = None,
+        # min_impurity_decrease = 0.0, min_impurity_split = None,
+        # class_weight = None, presort = False)
     elif algorithm == 'neural_network':
         # 定义多层感知机分类算法
         model = MLPClassifier(solver='lbfgs', activation='identity', max_iter=2, alpha=0.01,
-                              hidden_layer_sizes=(50, 50),
+                              hidden_layer_sizes=(10, 10),
                               random_state=1, verbose=True)
     elif algorithm == 'svm':
         model = svm.LinearSVC()
