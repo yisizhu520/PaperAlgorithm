@@ -7,4 +7,4 @@ parameters['pop_size'] = 400
 parameters['iteration_count'] = 3
 
 compare_with_other_algorithm('nsl-kddcup_1k.csv',
-                             '1_vs_4', parameters)
+                             '1_vs_5', parameters)

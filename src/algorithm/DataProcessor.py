@@ -183,7 +183,7 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     original_data = getdata('data/' + data_name)
     classes = get_class_labels(original_data)
     data = prepare_data(original_data, classes, iteration_count)
-    other_algorithms = ['svm', 'naive_bayes', 'decision_tree', 'neural_network']
+    other_algorithms = ['svm', 'naive_bayes', 'decision_tree', 'neural_network', 'knn']
     chart_dict = {'nega': {'TPR': [], 'FPR': []}}
     for algo in other_algorithms:
         chart_dict[algo] = {'TPR': [], 'FPR': []}
@@ -212,9 +212,9 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     lw = 2
     plt.figure(figsize=(10, 10))
     other_algorithms.insert(0, 'nega')
-    colors = ['aqua', 'darkorange', 'cornflowerblue', 'deeppink', 'navy']
-    line_styles = ['solid', 'dashed', 'dashdot', 'dotted', 'solid']
-    line_widths = [1, 1, 1, 1, 2]
+    colors = ['aqua', 'darkorange', 'cornflowerblue', 'deeppink', 'navy', 'aqua']
+    line_styles = ['solid', 'dashed', 'dashdot', 'dotted', 'solid', 'dashed']
+    line_widths = [1, 1, 1, 1, 2, 2]
     for i in range(len(other_algorithms)):
         algo = other_algorithms[i]
         chart_dict[algo]['algorithm'] = algo

@@ -11,6 +11,7 @@ from sklearn import naive_bayes
 from sklearn import tree
 from sklearn.neural_network import MLPClassifier
 import numpy as np
+from sklearn import neighbors
 
 
 def get_evaluation_indicator(algorithm, training_set, test_set):
@@ -35,6 +36,8 @@ def get_evaluation_indicator(algorithm, training_set, test_set):
                               random_state=1, verbose=True)
     elif algorithm == 'svm':
         model = svm.LinearSVC()
+    elif algorithm == 'knn':
+        model = neighbors.KNeighborsClassifier(n_neighbors=5, n_jobs=1)
 
     model.fit(training_set_data_2d, training_set_labels)
     start = time.time()
