@@ -24,7 +24,7 @@ def generate_population_with_antibodies(init_antibodies, training_set, classes, 
                 cost_dict[c] = class_prob_dict[c] * class_cost_dict[c]
         cost_dict = sorted(cost_dict.items(), key=lambda d: d[1], reverse=True)
         real_class = cost_dict[0][0]
-        if real_class != data[0]:
+        if cost_dict[0][1] > 0 and real_class != data[0]:
             print('origin class is ' + data[0] + ', real class is ' + real_class)
             data[0] = real_class
 
