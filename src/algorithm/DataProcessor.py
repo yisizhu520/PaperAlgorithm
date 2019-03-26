@@ -229,7 +229,7 @@ def compare_with_other_algorithm(data_name, file_name, parameters):
     plt.title(file_name)
     plt.legend(loc="lower right")
     plt.savefig('result/{}.png'.format(file_name))
-    plt.show()
+    # plt.show()
 
     headers = ['algorithm', 'fmeasure', 'gmean']
     df = pd.DataFrame.from_dict(chart_dict, orient='index', columns=headers)
@@ -365,4 +365,4 @@ def generate_roc_chart(chart_dict, file_name, pop_size):
     plt.title(file_name)
     plt.legend(loc="lower right")
     plt.savefig('result/{}-{}.png'.format(pop_size, file_name))
-    plt.show()
+    # plt.show()
