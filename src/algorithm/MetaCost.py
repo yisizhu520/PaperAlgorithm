@@ -47,7 +47,7 @@ def get_class_prob(data, antibodies, training_set):
 
     for hit in class_hit_dict:
         if total_hit_count == 0:
-            result[hit] = get_class_ratio(data, training_set)
+            result[hit] = 0
         else:
             result[hit] = class_hit_dict[hit] / float(total_hit_count)
     return result
