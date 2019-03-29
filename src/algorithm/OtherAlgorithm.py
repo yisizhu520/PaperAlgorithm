@@ -23,7 +23,7 @@ def get_evaluation_indicator(algorithm, training_set, test_set):
     if algorithm == 'naive_bayes':
         model = naive_bayes.GaussianNB()  # 高斯贝叶斯
     elif algorithm == 'decision_tree':
-        model = tree.DecisionTreeClassifier(max_depth=3)
+        model = tree.DecisionTreeClassifier(max_depth=7)
         # model = tree.DecisionTreeClassifier(criterion=’gini’, max_depth = None,
         # min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0,
         # max_features = None, random_state = None, max_leaf_nodes = None,
@@ -37,7 +37,7 @@ def get_evaluation_indicator(algorithm, training_set, test_set):
     elif algorithm == 'svm':
         model = svm.LinearSVC()
     elif algorithm == 'knn':
-        model = neighbors.KNeighborsClassifier(n_neighbors=5, n_jobs=1)
+        model = neighbors.KNeighborsClassifier(n_neighbors=10, n_jobs=1)
 
     model.fit(training_set_data_2d, training_set_labels)
     start = time.time()

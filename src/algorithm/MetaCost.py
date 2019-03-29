@@ -102,5 +102,5 @@ def get_class_cost(data, training_set):
         class_count_dict[t[0]] = class_count_dict[t[0]] + 1
 
     for c in class_count_dict:
-        result[c] = (float(class_count_dict[c]) / class_count_dict[data[0]]) * (2 + random.random())
+        result[c] = ( class_count_dict[data[0]] / float(class_count_dict[c])) * (2 + random.random())
     return result
