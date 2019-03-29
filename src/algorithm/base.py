@@ -68,6 +68,17 @@ def get_class_antibody_dict(antibodies):
     return classes_antibody_dict
 
 
+def get_class_data_dict(data_set):
+    classes_data_dict = {}
+    for a in data_set:
+        if a[0] not in classes_data_dict:
+            classes_data_dict[a[0]] = []
+            classes_data_dict[a[0]].append(a)
+        else:
+            classes_data_dict[a[0]].append(a)
+    return classes_data_dict
+
+
 def get_evaluation_indicator(antibodies, test_data, class_label):
     TP, TN, FP, FN = 0, 0, 0, 0
     SE, SP, TPR, FPR = 0, 0, 0, 0
