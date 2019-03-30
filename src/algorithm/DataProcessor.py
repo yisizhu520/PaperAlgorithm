@@ -381,15 +381,13 @@ def generate_roc_chart(pop_chart_dict, file_name):
         # 计算auc的值
         before_FPRs, before_TPRs, = format_fpr_tpr(chart_dict['before']['FPR'], chart_dict['before']['TPR'])
         after_FPRs, after_TPRs, = format_fpr_tpr(chart_dict['after']['FPR'], chart_dict['after']['TPR'])
-        x += before_FPRs + after_FPRs
-        y += before_TPRs + after_TPRs
         roc_auc_before = auc(before_FPRs, before_TPRs)
         roc_auc_after = auc(after_FPRs, after_TPRs)
         # 假正率为横坐标，真正率为纵坐标做曲线
         plt.plot(before_FPRs, before_TPRs, color='darkorange', linewidth=count,
-                 lw=lw, label='%d before (AUC area = %0.2f)' % (size, roc_auc_before), linestyle='solid')
+                 lw=lw, label='%d before (AUC area = %0.4f)' % (size, roc_auc_before), linestyle='solid')
         plt.plot(after_FPRs, after_TPRs, color='green', linewidth=count,
-                 lw=lw, label='%d after (AUC area = %0.2f)' % (size, roc_auc_before), linestyle='dashed')
+                 lw=lw, label='%d after (AUC area = %0.4f)' % (size, roc_auc_after), linestyle='dashed')
         count += 1
     plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='dotted')
     plt.xlim([0.0, 1.0])
